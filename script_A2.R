@@ -87,7 +87,7 @@ ggplot(df_plt)+
   geom_line(aes(x=n, y=nb2)) +
   geom_line(aes(x=n, y=nb3)) +
   geom_line(aes(x=n, y=lr1)) +
-  geom_line(aes(x=n, y=lr2))
+  geom_line(aes(x=n, y=lr2)) # to be modified
 
 
 
