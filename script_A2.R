@@ -91,8 +91,31 @@ ggplot(df_plt)+
 
 
 
+### Monte Carlo replicates
 
+loss_matrix <- function(){ 
+  train <- mydata[sample(nrow(mydata)/2),]
+  test <- mydata[-sample(nrow(mydata)/2),]
+  loss <- matrix(0, nrow(train), 3)
+  for(i in 1:nrow(train)){
+    nb_model1 <- naiveBayes(eval ~. ,train[seq(i),], laplace = 1) # train for sample size=n each time
+    pred1 <- predict(nb_model1, test[seq(i),])
+    nb_model2 <- naiveBayes(eval ~. ,train[seq(i),], laplace = 0.1) # laplace = 0.1
+    pred2 <- predict(nb_model2, test[seq(i),])
+    nb_model3 <- naiveBayes(eval ~. ,train[seq(i),], laplace = 10) # laplace = 10
+    pred3 <- predict(nb_model3, test[seq(i),])
+    
+    l1 <- loss_fun01(pred1, train[seq(i), 7], i)
+    l2 <- loss_fun01(pred2, train[seq(i), 7], i)
+    l3 <- loss_fun01(pred3, train[seq(i), 7], i)
+    
+    loss[i,] <- c(l1,l2,l3) 
+  }                
+  return(losses_NB)
+}
 
+M <- list()
+M <- replicate(20, loss_matrix())
 
 
 
