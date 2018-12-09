@@ -83,27 +83,31 @@ rm(df)
 names(df_plt)<-c("nb1", "nb2", "nb3", "lr1", "lr2", "n")
 
 ggplot(df_plt)+
-  geom_line(aes(x=n, y=nb1)) +
-  geom_line(aes(x=n, y=nb2)) +
-  geom_line(aes(x=n, y=nb3)) +
-  geom_line(aes(x=n, y=lr1)) +
-  geom_line(aes(x=n, y=lr2)) # to be modified
+  geom_line(aes(x=nb1, y=n)) +
+  geom_line(aes(x=nb2, y=n)) +
+  geom_line(aes(x=nb3, y=n)) +
+  geom_line(aes(x=lr1, y=n)) +
+  geom_line(aes(x=lr2, y=n)) # to be modified
 
 
 
 ### Monte Carlo replicates
 
+NB_model <- function(k, a){
+  mod <- naiveBayes(eval ~. ,train[seq(k),], laplace = a)
+  return(predict(mod, test[seq(k),]))
+}
+
 loss_matrix <- function(){ 
-  train <- mydata[sample(nrow(mydata)/2),]
-  test <- mydata[-sample(nrow(mydata)/2),]
+  
   loss <- matrix(0, nrow(train), 3)
   for(i in 1:nrow(train)){
-    nb_model1 <- naiveBayes(eval ~. ,train[seq(i),], laplace = 1) # train for sample size=n each time
-    pred1 <- predict(nb_model1, test[seq(i),])
-    nb_model2 <- naiveBayes(eval ~. ,train[seq(i),], laplace = 0.1) # laplace = 0.1
-    pred2 <- predict(nb_model2, test[seq(i),])
-    nb_model3 <- naiveBayes(eval ~. ,train[seq(i),], laplace = 10) # laplace = 10
-    pred3 <- predict(nb_model3, test[seq(i),])
+    train <- mydata[sample(nrow(mydata)/2),]
+    test <- mydata[-sample(nrow(mydata)/2),]
+    
+    pred1 <- NB_model(i, 1)
+    pred2 <- NB_model(i, 0.1)
+    pred3 <- NB_model(i, 10)
     
     l1 <- loss_fun01(pred1, train[seq(i), 7], i)
     l2 <- loss_fun01(pred2, train[seq(i), 7], i)
