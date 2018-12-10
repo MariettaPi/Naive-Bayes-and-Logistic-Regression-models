@@ -11,14 +11,14 @@ mydata <- data.frame(cardata[, 1:6], eval = ifelse(cardata[, 7] == "unacc", "Neg
 
 names(mydata) <- c("Buying", "Maint", "Doors", "Persons", "Lug_Boot", "safety", "eval")
 
-rand <- sample(nrow(mydata)/2)
+rand <- sample(nrow(mydata)/2) # Initial Permutation of
 train <- mydata[rand,]
 test <- mydata[-rand,]
 
 # Specification of loss function
 
 loss_fun01 <- function(x,y,k){
-  ind <- ifelse(x==y, 1,0)
+  ind <- ifelse(x==y, 0,1)
   return(sum(as.numeric(ind))/k)
 }
 
@@ -70,9 +70,32 @@ for(i in 4:nrow(train)){
 
 head(losses_LR)
 tail(losses_LR)
-#lr <- glm(eval ~. ,train[seq(40),], family = binomial) 
-#lr$xlevels[["Buying"]] <- union(lr$xlevels[["Buying"]], levels(test[seq(40),]$Buying))
-#predict(lr, type = "response", newdata = subset(test[seq(40),], filt))
+
+# Penalized logistic regression
+
+
+losses_PR <- matrix(0, nrow(train), 2)
+for(i in 4:nrow(train)){
+  
+  pr_model1 <- glmnet(train[1:i, 7] ,train[1:i, 1:6], family = binomial) # train for sample size=n each time
+  pr_model1$xlevels[["Buying"]] <- union(pr_model1$xlevels[["Buying"]], levels(test[seq(i),]$Buying))
+ 
+  pr_model2 <- glmnet(train[1:i, 7] ,train[1:i, 1:2], family = binomial) # laplace = 0.1
+  pr_model2$xlevels[["Buying"]] <- union(pr_model2$xlevels[["Buying"]], levels(test[seq(i),]$Buying))
+  
+  losses_PR[i,] <- c(LR_accuracy(pr_model1, test[seq(i),]), 
+                     PR_accuracy(pr_model2, test[seq(i),])) 
+}                
+
+glmnet(train[1:4, 7] ,train[1:4, 1:2], family = "binomial",alpha = 0, nfolds=5) 
+
+model.matrix( ~ .-1, train[,1:2])
+
+
+
+
+
+
 
 #-------------------- Plot
 
@@ -83,11 +106,11 @@ rm(df)
 names(df_plt)<-c("nb1", "nb2", "nb3", "lr1", "lr2", "n")
 
 ggplot(df_plt)+
-  geom_line(aes(x=nb1, y=n)) +
-  geom_line(aes(x=nb2, y=n)) +
-  geom_line(aes(x=nb3, y=n)) +
-  geom_line(aes(x=lr1, y=n)) +
-  geom_line(aes(x=lr2, y=n)) # to be modified
+  geom_line(aes(x=log(n), y=nb1)) +
+  geom_line(aes(x=log(n), y=nb2), color='red') +
+  geom_line(aes(x=log(n), y=nb3), color='green') +
+  geom_line(aes(x=log(n), y=lr1), color='blue') +
+  geom_line(aes(x=log(n), y=lr2), color='orange') # to be modified
 
 
 
@@ -98,12 +121,12 @@ NB_model <- function(k, a){
   return(predict(mod, test[seq(k),]))
 }
 
-loss_matrix <- function(){ 
-  
+loss_matrix <- function(seed){
+  set.seed(seed)
+  train <- mydata[sample(nrow(mydata)/2),]
+  test <- mydata[-sample(nrow(mydata)/2),]
   loss <- matrix(0, nrow(train), 3)
   for(i in 1:nrow(train)){
-    train <- mydata[sample(nrow(mydata)/2),]
-    test <- mydata[-sample(nrow(mydata)/2),]
     
     pred1 <- NB_model(i, 1)
     pred2 <- NB_model(i, 0.1)
@@ -115,11 +138,15 @@ loss_matrix <- function(){
     
     loss[i,] <- c(l1,l2,l3) 
   }                
-  return(losses_NB)
+  return(loss)
 }
 
+head(loss_matrix(1234))
+
+
 M <- list()
-M <- replicate(20, loss_matrix())
+M <- replicate(2, loss_matrix())
+
 
 
 
